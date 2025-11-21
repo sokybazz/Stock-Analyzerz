@@ -30,6 +30,7 @@ export interface GroundingSource {
 export type StockCategory = 'Growth' | 'Penny';
 export type PredictionDuration = '7 Days' | '15 Days' | '1 Month';
 export type StockSector = 'All' | 'Banking' | 'IT' | 'Auto' | 'Pharma' | 'FMCG' | 'Energy' | 'Metal' | 'Infra' | 'Realty';
+export type RiskLevel = 'All' | 'Low' | 'Medium' | 'High';
 
 export interface User {
   id: string;

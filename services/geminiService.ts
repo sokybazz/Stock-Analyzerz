@@ -1,12 +1,13 @@
 import { GoogleGenAI } from "@google/genai";
-import { PredictionResponse, GroundingSource, StockCategory, PredictionDuration, StockSector } from "../types";
+import { PredictionResponse, GroundingSource, StockCategory, PredictionDuration, StockSector, RiskLevel } from "../types";
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export const fetchStockPredictions = async (
   category: StockCategory,
   duration: PredictionDuration,
-  sector: StockSector
+  sector: StockSector,
+  riskLevel: RiskLevel
 ): Promise<{ data: PredictionResponse; sources: GroundingSource[] }> => {
   const modelId = 'gemini-3-pro-preview'; // Using pro-preview for high-reasoning + search
 
@@ -23,6 +24,16 @@ export const fetchStockPredictions = async (
     ? "Analyze all major sectors to find the absolute best opportunities." 
     : `Focus EXCLUSIVELY on stocks within the ${sector} sector. Do not recommend stocks from other sectors.`;
 
+  let riskContext = "";
+  if (riskLevel !== 'All') {
+    riskContext = `Strictly filter for stocks with a ${riskLevel} Risk profile. `;
+    if (riskLevel === 'Low') riskContext += "Prioritize established companies (Bluechips/Large-caps) with low beta, consistent earnings, and high stability.";
+    if (riskLevel === 'Medium') riskContext += "Look for a balance between stability and growth potential (Mid-caps or defensive growth stocks).";
+    if (riskLevel === 'High') riskContext += "Identify aggressive growth stocks, high beta counters, or turnaround candidates with significant volatility.";
+  } else {
+    riskContext = "Select stocks across risk profiles that maximize the profit potential.";
+  }
+
   // Adjusting logic for short durations
   const returnExpectation = duration === '7 Days' 
     ? "Identify high-momentum breakout stocks that could yield 15% or maximum possible short-term gains." 
@@ -34,6 +45,7 @@ export const fetchStockPredictions = async (
     
     ${typeContext}
     ${sectorContext}
+    ${riskContext}
     ${returnExpectation}
     
     You MUST use Google Search to analyze:

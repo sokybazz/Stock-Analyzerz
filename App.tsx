@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { fetchStockPredictions } from './services/geminiService';
-import { PredictionResponse, GroundingSource, StockCategory, PredictionDuration, StockSector, User } from './types';
+import { PredictionResponse, GroundingSource, StockCategory, PredictionDuration, StockSector, RiskLevel, User } from './types';
 import { StockCard } from './components/StockCard';
 import { MarketChart } from './components/MarketChart';
 import { AuthScreen } from './components/AuthScreen';
@@ -18,7 +18,8 @@ import {
   Layers,
   LogOut,
   PieChart,
-  User as UserIcon
+  LayoutDashboard,
+  Shield
 } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -35,6 +36,7 @@ const App: React.FC = () => {
   const [category, setCategory] = useState<StockCategory>('Growth');
   const [duration, setDuration] = useState<PredictionDuration>('1 Month');
   const [sector, setSector] = useState<StockSector>('All');
+  const [riskLevel, setRiskLevel] = useState<RiskLevel>('All');
 
   const sectors: StockSector[] = ['All', 'Banking', 'IT', 'Auto', 'Pharma', 'FMCG', 'Energy', 'Metal', 'Infra', 'Realty'];
 
@@ -45,7 +47,7 @@ const App: React.FC = () => {
     setSources([]);
     
     try {
-      const result = await fetchStockPredictions(category, duration, sector);
+      const result = await fetchStockPredictions(category, duration, sector, riskLevel);
       setData(result.data);
       setSources(result.sources);
     } catch (err: any) {
@@ -53,6 +55,12 @@ const App: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const goToDashboard = () => {
+    setData(null);
+    setError(null);
+    setLoading(false);
   };
 
   const handleLogout = () => {
@@ -72,11 +80,15 @@ const App: React.FC = () => {
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-white/10 bg-dark-900/80 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="bg-brand-600 p-1.5 rounded-lg">
+          <div 
+            className="flex items-center gap-2 cursor-pointer group" 
+            onClick={goToDashboard}
+            title="Go to Dashboard"
+          >
+            <div className="bg-brand-600 p-1.5 rounded-lg group-hover:bg-brand-500 transition-colors">
               <TrendingUp className="text-white h-6 w-6" />
             </div>
-            <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400 hidden sm:block">
+            <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400 hidden sm:block group-hover:text-white transition-colors">
               IndiEquity AI
             </span>
             <span className="text-xl font-bold text-white sm:hidden">IndiEquity</span>
@@ -84,8 +96,19 @@ const App: React.FC = () => {
           
           <div className="flex items-center gap-4">
             <div className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-400 mr-4">
-              <span className="hover:text-white cursor-pointer transition-colors">Market Analysis</span>
-              <span className="hover:text-white cursor-pointer transition-colors">Top Picks</span>
+              <button 
+                onClick={goToDashboard}
+                className={`flex items-center gap-2 transition-colors ${!data ? 'text-white' : 'hover:text-white'}`}
+              >
+                <LayoutDashboard size={16} /> Dashboard
+              </button>
+              {data && (
+                <>
+                  <span className="text-brand-400 flex items-center gap-2">
+                    <BarChart2 size={16} /> Analysis Report
+                  </span>
+                </>
+              )}
             </div>
 
             {/* User Profile Dropdown/Display */}
@@ -115,33 +138,39 @@ const App: React.FC = () => {
         
         {/* Hero Section */}
         <div className="text-center mb-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-400 text-xs font-semibold uppercase tracking-wide mb-4">
-            <Zap size={14} /> Welcome back, {user.name.split(' ')[0]}
-          </div>
-          <h1 className="text-4xl md:text-6xl font-bold mb-6 tracking-tight">
-            Predict <span className="text-brand-500">High-Growth</span> Indian Stocks
-          </h1>
-          <p className="text-lg text-slate-400 max-w-2xl mx-auto mb-8 leading-relaxed">
-            Leverage advanced AI to analyze NSE/BSE market trends, institutional flows, and technical patterns. 
-            Identify stocks with high upside potential for your selected timeframe.
-          </p>
+          {!data && (
+            <>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-400 text-xs font-semibold uppercase tracking-wide mb-4">
+                <Zap size={14} /> Welcome back, {user.name.split(' ')[0]}
+              </div>
+              <h1 className="text-4xl md:text-6xl font-bold mb-6 tracking-tight">
+                Predict <span className="text-brand-500">High-Growth</span> Indian Stocks
+              </h1>
+              <p className="text-lg text-slate-400 max-w-2xl mx-auto mb-8 leading-relaxed">
+                Leverage advanced AI to analyze NSE/BSE market trends, institutional flows, and technical patterns. 
+                Identify stocks with high upside potential for your selected timeframe.
+              </p>
+            </>
+          )}
           
           {/* Controls Panel */}
           {!loading && !data && (
-            <div className="max-w-2xl mx-auto bg-slate-900/50 backdrop-blur border border-slate-700 rounded-2xl p-6 mb-8 animate-fade-in-up shadow-xl">
+            <div className="max-w-4xl mx-auto bg-slate-900/50 backdrop-blur border border-slate-700 rounded-2xl p-6 mb-8 animate-fade-in-up shadow-xl">
               
               <div className="flex flex-col gap-6">
                 
-                <div className="grid md:grid-cols-2 gap-6">
-                  {/* Stock Category Selection */}
+                {/* Top Row Controls */}
+                <div className="grid md:grid-cols-3 gap-6">
+                  
+                  {/* Category */}
                   <div>
                     <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">
-                      <Layers size={14} /> Stock Category
+                      <Layers size={14} /> Category
                     </label>
                     <div className="grid grid-cols-2 gap-2 p-1 bg-dark-900 rounded-xl border border-slate-800">
                       <button
                         onClick={() => setCategory('Growth')}
-                        className={`py-2.5 px-4 rounded-lg text-sm font-semibold transition-all duration-300 ${
+                        className={`py-2 px-3 rounded-lg text-xs font-semibold transition-all duration-300 ${
                           category === 'Growth' 
                             ? 'bg-brand-600 text-white shadow-lg shadow-brand-500/20' 
                             : 'text-slate-400 hover:text-white hover:bg-slate-800'
@@ -151,7 +180,7 @@ const App: React.FC = () => {
                       </button>
                       <button
                         onClick={() => setCategory('Penny')}
-                        className={`py-2.5 px-4 rounded-lg text-sm font-semibold transition-all duration-300 ${
+                        className={`py-2 px-3 rounded-lg text-xs font-semibold transition-all duration-300 ${
                           category === 'Penny' 
                             ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/20' 
                             : 'text-slate-400 hover:text-white hover:bg-slate-800'
@@ -162,17 +191,17 @@ const App: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Duration Selection */}
+                  {/* Duration */}
                   <div>
                     <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">
-                      <Clock size={14} /> Prediction Duration
+                      <Clock size={14} /> Duration
                     </label>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-3 gap-1.5">
                       {(['7 Days', '15 Days', '1 Month'] as PredictionDuration[]).map((d) => (
                         <button
                           key={d}
                           onClick={() => setDuration(d)}
-                          className={`py-2 px-1 rounded-lg text-xs font-semibold border transition-all duration-200 ${
+                          className={`py-2 px-1 rounded-lg text-[10px] sm:text-xs font-semibold border transition-all duration-200 ${
                             duration === d
                               ? 'bg-slate-800 border-brand-500/50 text-brand-400 shadow-[0_0_15px_rgba(34,197,94,0.1)]'
                               : 'bg-dark-900 border-slate-800 text-slate-500 hover:border-slate-600 hover:text-slate-300'
@@ -183,6 +212,20 @@ const App: React.FC = () => {
                       ))}
                     </div>
                   </div>
+
+                  {/* Risk Appetite */}
+                  <div>
+                     <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">
+                      <Shield size={14} /> Risk Appetite
+                    </label>
+                    <div className="grid grid-cols-4 gap-1.5">
+                       <button onClick={() => setRiskLevel('All')} className={`py-2 px-1 rounded-lg text-[10px] font-bold border transition-colors ${riskLevel === 'All' ? 'bg-slate-700 text-white border-slate-600' : 'bg-dark-900 border-slate-800 text-slate-500'}`}>All</button>
+                       <button onClick={() => setRiskLevel('Low')} className={`py-2 px-1 rounded-lg text-[10px] font-bold border transition-colors ${riskLevel === 'Low' ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-dark-900 border-slate-800 text-slate-500'}`}>Low</button>
+                       <button onClick={() => setRiskLevel('Medium')} className={`py-2 px-1 rounded-lg text-[10px] font-bold border transition-colors ${riskLevel === 'Medium' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' : 'bg-dark-900 border-slate-800 text-slate-500'}`}>Med</button>
+                       <button onClick={() => setRiskLevel('High')} className={`py-2 px-1 rounded-lg text-[10px] font-bold border transition-colors ${riskLevel === 'High' ? 'bg-red-500/20 text-red-400 border-red-500/30' : 'bg-dark-900 border-slate-800 text-slate-500'}`}>High</button>
+                    </div>
+                  </div>
+
                 </div>
 
                 {/* Sector Selection */}
@@ -195,7 +238,7 @@ const App: React.FC = () => {
                       <button
                         key={s}
                         onClick={() => setSector(s)}
-                        className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 ${
+                        className={`px-4 py-2 rounded-full text-xs font-medium border transition-all duration-200 ${
                           sector === s
                             ? 'bg-brand-500/10 border-brand-500/40 text-brand-400'
                             : 'bg-slate-800/50 border-slate-700 text-slate-400 hover:bg-slate-700 hover:text-slate-200'
@@ -234,7 +277,9 @@ const App: React.FC = () => {
             </div>
             <h3 className="mt-6 text-xl font-semibold text-white">Scanning Market...</h3>
             <p className="text-slate-400 mt-2 text-center max-w-md">
-              Analyzing {category.toLowerCase()} stocks in {sector === 'All' ? 'all sectors' : `the ${sector} sector`} for the next {duration.toLowerCase()}. Checking technical indicators, volume breakouts, and market sentiment.
+              Analyzing {category.toLowerCase()} stocks in {sector === 'All' ? 'all sectors' : `the ${sector} sector`} for the next {duration.toLowerCase()}.
+              <br/>
+              <span className="text-xs text-slate-500 mt-1 inline-block">Targeting {riskLevel === 'All' ? 'mixed' : riskLevel} risk profile.</span>
             </p>
           </div>
         )}
@@ -298,11 +343,22 @@ const App: React.FC = () => {
                   <BarChart2 className="text-brand-500" />
                   <h2 className="text-2xl font-bold text-white">Top {category} Picks ({sector})</h2>
                 </div>
-                {category === 'Penny' && (
-                  <span className="text-xs text-red-400 bg-red-400/10 px-3 py-1 rounded-full border border-red-400/20 font-medium animate-pulse">
-                    High Risk Alert
-                  </span>
-                )}
+                <div className="flex gap-2">
+                   {riskLevel !== 'All' && (
+                     <span className={`text-xs px-3 py-1 rounded-full border font-medium ${
+                       riskLevel === 'High' ? 'text-red-400 bg-red-400/10 border-red-400/20' : 
+                       riskLevel === 'Medium' ? 'text-yellow-400 bg-yellow-400/10 border-yellow-400/20' :
+                       'text-green-400 bg-green-400/10 border-green-400/20'
+                     }`}>
+                        {riskLevel} Risk
+                     </span>
+                   )}
+                   {category === 'Penny' && riskLevel !== 'High' && (
+                    <span className="text-xs text-red-400 bg-red-400/10 px-3 py-1 rounded-full border border-red-400/20 font-medium animate-pulse">
+                      High Risk Alert
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {data.stocks.map((stock, index) => (
